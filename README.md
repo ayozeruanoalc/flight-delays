@@ -1,4 +1,7 @@
-# FLIGHTDELAYS
+# FlightDelays
+
+[![My Skills](https://go-skill-icons.vercel.app/api/icons?i=java,idea,maven,junit,python,vscode,anaconda,scikitlearn,pandas,api,sqlite,uml,github)](https://go-skill-icons.vercel.app/api/)
+
 
 ### Descripción del proyecto y propuesta de valor
 
