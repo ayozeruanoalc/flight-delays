@@ -2,36 +2,117 @@
 
 [![My Skills](https://go-skill-icons.vercel.app/api/icons?i=java,idea,maven,junit,python,vscode,anaconda,scikitlearn,pandas,api,sqlite,uml,github)](https://go-skill-icons.vercel.app/api/)
 
+## 📚 Tabla de Contenidos
+- [📝 Descripción del proyecto y propuesta de valor](#-descripción-del-proyecto-y-propuesta-de-valor)
+- [🧩 Tecnologías utilizadas](#-tecnologías-utilizadas)
+- [🎯 Justificación de APIs y estructura del Datamart](#-justificación-de-la-elección-de-apis-y-estructura-del-datamart)
+- [⚙️ Configuración](#%EF%B8%8F-configuraci%C3%B3n)
+- [Modos de ejecución](#tutorial-de-ejecución-con-ejemplos)
+- [Uso de la UI](#tutorial-de-uso-de-la-ui)
+- [Arquitectura](#arquitecturas-del-sistema-y-aplicación)
+- [Principios y patrones de diseño](#principios-y-patrones-de-diseño-aplicados-en-cada-módulo)
 
-### Descripción del proyecto y propuesta de valor
 
-FlightDelays es una aplicación desarrollada en Java que permite registrar, procesar y correlacionar datos sobre retrasos de vuelos con las condiciones meteorológicas asociadas a los aeropuertos de origen y destino. El sistema se basa principalmente en ActiveMQ como núcleo de su arquitectura, utilizando esta plataforma de mensajería para desacoplar procesos y gestionar eventos de forma asíncrona. Adicionalmente, cuenta con un mecanismo opcional de persistencia de datos mediante SQLite, que puede ser utilizado según las necesidades del entorno o configuración.
+## 📝 Descripción del proyecto y propuesta de valor
 
-Tecnologías utilizadas:
-- Lenguaje de programación: Java 21
-- Lenguaje auxiliar: Python 3.11.9
-- Gestor de dependencias: Apache Maven
-- Base de datos: SQLite
-- Mensajería asíncrona: Apache ActiveMQ
-- IDE de desarrollo: IntelliJ IDEA
+**FlightDelays** es una aplicación desarrollada en **Java** que permite registrar, procesar y correlacionar datos sobre **retrasos de vuelos** con las **condiciones meteorológicas** asociadas a los aeropuertos de origen y destino.
 
-El valor que se aporta específicamente al usuario se trata de una UI, a la que es posible hacerle consultas sobre el rendimiento de determinados clasificadores
-(predictores), que tomen las condiciones climáticas de aeropuertos; e intenten explicar los retrasos de vuelos mediante las mismas. De esta manera, si algún modelo alcanzase un valor de error lo suficientemente pequeño al haberse entrenado con una cantidad de registros considerable, querrá decir que sería capaz de hacer predicciones sobre retrasos con un grado de precisión considerable. El usuario será capaz de elegir el aeropuerto y si se considera de llegada o salida (tal vez el clima afecte más en el retraso de un aterrizaje que en el de un despegue), y cuál de los modelos disponibles se entrenará.
+El sistema se basa principalmente en **ActiveMQ** como núcleo de su arquitectura, utilizando esta plataforma de mensajería para desacoplar procesos y **gestionar eventos de forma asíncrona**.
+Adicionalmente, cuenta con un mecanismo opcional de **persistencia de datos** mediante **SQLite**, que puede ser utilizado según las necesidades del entorno o configuración.
 
-### Justificación de la elección de APIs y estructura del Datamart 
+El valor que se aporta específicamente al usuario se trata de una **UI**, a la que es posible hacerle consultas sobre el rendimiento de determinados **predictores**, que tomen las **condiciones climáticas de aeropuertos** e intenten **explicar los retrasos de vuelos** mediante las mismas.
 
-La API utilizada para recabar información sobre el tráfico aéreo es AviationStackAPI, seleccionada por su amplio alcance de datos a nivel global. Además, permite obtener información detallada sobre vuelos, aeropuertos, aerolíneas y estados de vuelos, lo cual es fundamental para el análisis de retrasos y su correlación con condiciones externas.
+De esta manera, si algún modelo alcanzase un **valor de error lo suficientemente pequeño** al haberse entrenado con una **cantidad de registros considerable**, querrá decir que sería capaz de hacer **predicciones sobre retrasos con un grado de precisión notable**. El usuario será capaz de:
+- Elegir el aeropuerto.
+- Si se considera de **llegada o salida** (tal vez el clima afecte más en el retraso de un aterrizaje que en el de un despegue)
+- Escoger **cuál de los modelos disponibles** se entrenará.
 
-Para los datos meteorológicos, se integró la API de OpenWeatherMap, que proporciona datos históricos y en tiempo real sobre el clima en ubicaciones específicas, permitiendo así una correlación efectiva entre el estado del tiempo y los retrasos en vuelos. 
+## 🧩 Tecnologías utilizadas
 
-**La estructura de datamart planteada es la siguiente:** 
-- Particiones para eventos recibidos en tiempo real: 2 archivos CSV, que se encargan de almacenar la información que envíe el broker en tiempo real (1 archivo por tópico implementado; en este caso, Flights y Weather). Cuentan con un campo de marca temporal, para gestionar la asincronía y realizar matching de forma óptima; y otro campo donde se guardan los eventos provenientes del broker en formato crudo (como json).
-- Partición limpia (con matching aplicado): 1 archivo CSV, que representa la información valiosa a la que posteriormente se le hará análisis (via Python); también se le puede ver como el resultado de emparejar eventos de vuelos y climas que sean compatibles (con esto se refiere a que tengan registros temporales muy cercanos en el tiempo), ya sea su fuente un histórico o las particiones para eventos en tiempo real.
-- Partición procesada: 1 archivo CSV, que es el resultado del análisis de Python efectuado a la partición limpia. Contiene toda la información que le pudiese ser útil al usuario; que podrá ser accesible mediante la UI.
+| Categoría              | Tecnologías                                                                 |
+|------------------------|------------------------------------------------------------------------------|
+| Lenguajes              | Java 21, Python 3.11.9                                                       |
+| IDEs y entornos        | IntelliJ IDEA, VSCode, Anaconda                                              |
+| Librerías de análisis  | Pandas, Scikit-learn                                                         |
+| Testing                | JUnit                                                                        |
+| Base de datos          | SQLite                                                                       |
+| APIs externas          | AviationStack, OpenWeatherMap                                                |
+| Arquitectura           | Apache ActiveMQ, arquitectura basada en eventos                             |
+| Diseño/modelado | UML                                                                          |
+| Control de versiones   | GitHub  
 
-La estructura del Datamart planteada ofrece una serie de ventajas clave que justifican su diseño. En primer lugar, destaca por su modularidad, ya que cada etapa del flujo de datos —captura, transformación y análisis— está claramente separada, lo que facilita tanto el mantenimiento como la identificación y corrección de errores. Además, la arquitectura es escalable, permitiendo que componentes específicos, como el proceso de emparejamiento de eventos (matching), puedan evolucionar o ampliarse sin impactar el funcionamiento del resto del sistema. Esta separación de responsabilidades también aporta una alta flexibilidad, ya que permite modificar o reemplazar herramientas o tecnologías (por ejemplo, sustituir el motor de análisis en Python por otro) sin necesidad de rediseñar la solución completa. Por último, se logra una mayor robustez frente a fallos gracias al almacenamiento intermedio en archivos CSV, que actúan como puntos de control persistentes, permitiendo la recuperación o reprocesamiento de los datos ante interrupciones o errores inesperados. Esta combinación de características hace que la arquitectura sea sólida, mantenible y adaptable a distintos contextos y requerimientos.
+## 🎯 Justificación de la elección de APIs y estructura del Datamart 
 
-### Configuración
+### 🌐 APIs seleccionadas
+
+**✈️ AviationStack API** → https://aviationstack.com/ 
+
+Elegida por su **amplio alcance global** y su capacidad para proporcionar información detallada sobre:
+- Vuelos
+- Aeropuertos
+- Aerolíneas
+- Estados de vuelos
+
+Esto la convierte en una fuente fundamental para analizar retrasos y correlacionarlos con condiciones externas.
+
+**🌦️ OpenWeatherMap History API** → https://openweathermap.org/history
+
+Integrada para acceder a **datos meteorológicos históricos**, permitiendo:
+- Obtener condiciones climáticas precisas en ubicaciones específicas
+- Correlacionar efectivamente **clima y retrasos** de vuelos
+
+---
+
+### 🗃️ Estructura del Datamart
+
+La arquitectura del Datamart se organiza en **tres secciones principales**, cada una con una función y propósito claro:
+
+**1️⃣ Particiones de eventos en tiempo real**
+
+- **Formato**: Archivos `.csv`
+- **Cantidad**: 2 archivos (uno por tópico: `Flights` y `Weather`)
+- **Contenido**:
+    - Campo de **marca temporal** para gestionar asincronía
+    - Campo con el **evento crudo en formato JSON** proveniente del broker
+- **Objetivo**: Almacenar información entrante en tiempo real para su posterior procesamiento
+
+**2️⃣ Partición limpia (matching aplicado)**
+
+- **Formato**: Archivo `.csv`
+- **Contenido**:
+    - Eventos de vuelos y clima **emparejados por cercanía temporal**
+    - Recogidos en tiempo real o provenientes de históricos
+- **Objetivo**: Dataset limpio y estructurado para análisis en Python
+
+**3️⃣ Partición procesada**
+
+- **Formato**: Archivo `.csv`
+- **Contenido**:
+    - Resultado del análisis realizado sobre la partición limpia
+    - Información procesada y lista para su consulta mediante la UI
+- **Objetivo**: Brindar datos útiles al usuario final
+
+---
+
+### 🧠 Ventajas del diseño del Datamart
+
+#### ✅ Modularidad
+Cada etapa del flujo (captura, transformación, análisis) está separada, facilitando:
+- Mantenimiento
+- Trazabilidad de errores
+
+#### ✅ Escalabilidad
+Componentes como el matching pueden evolucionar sin impactar el resto del sistema.
+
+#### ✅ Flexibilidad
+Permite sustituir herramientas (por ejemplo, cambiar Python por otra tecnología de análisis) sin rediseñar el sistema completo.
+
+#### ✅ Robustez
+El uso de archivos intermedios `.csv` como **checkpoints persistentes** mejora:
+- Recuperación ante fallos
+- Reprocesamiento ante errores inesperados
+
+## ⚙️ Configuración
 
 1. Instalar el ActiveMQ en tu equipo.
 2. Es necesario tener instalado Python (v3.11.9 o superiores). También debe estar definido como variable de entorno del sistema.
