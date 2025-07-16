@@ -114,52 +114,110 @@ El uso de archivos intermedios `.csv` como **checkpoints persistentes** mejora:
 
 ## ⚙️ Configuración
 
-1. Instalar el ActiveMQ en tu equipo.
-2. Es necesario tener instalado Python (v3.11.9 o superiores). También debe estar definido como variable de entorno del sistema.
-3. Maven debe poder ejecutarse en IntelliJ. Si diese error, reinstalar Maven, agregar a variables del sistema y ejecutar en IntelliJ ```mvn clean install```. 
-5. Clonar el proyecto de Github en IntelliJ con la opción de **Repository URL**, pegando el link del repositorio.
-6. Preparar los módulos para su funcionamiento: 
-    - Ir al main de AviationStackFeeder:
-        - **Argumentos en orden (salto de línea para separarlos):** 
-            - Ruta absoluta de database.
-            - Enlace URL de conexión TCP del broker de ActiveMQ. (Ejemplo: ```tcp://localhost:12345```)
-            - Cuatro códigos IATA de aeropuertos, con los que trabajará el feeder. (Ejemplos: ```MAD``` ```AMS``` ```JFK``` ```ZRH```)*
-            - Número indefinido, elegido por el consumidor, de apiKeys de AviationStack.*
-    - Ir al main de Event-Store-Builder:
-        - **Argumentos en orden (salto de línea para separarlos):** 
-            - Enlace URL de conexión TCP del broker de ActiveMQ.
-            - Tópicos del broker de mensajería de ActiveMQ. (Obligatoriamente deben ser: ```Flights``` y ```Weather```)*
-    - Ir al main de Flight-Delay-Estimator:
-        - **Argumentos en orden (salto de línea para separarlos):**
-            - Ruta relativa del histórico de vuelos (obligatoriamente: ```eventstore/Flights/AviationStackFeeder```).
-            - Ruta relativa del histórico de climas (obligatoriamente: ```eventstore/Weather/OpenWeatherMapFeeder```).
-            - Ruta absoluta del CSV para guardar los archivos matcheados.
-            - Enlace URL de conexión TCP del broker de ActiveMQ.
-            - Tópicos del broker de mensajería de ActiveMQ (obligatoriamente deben ser: ```Flights``` y ```Weather```)*
-            - Rute relativa de CSVs crudos. (tienen que ser obligatoriamente: ```flight-delay-estimator/src/main/resources/datamart-partition-for-raw-flights.csv``` y ```flight-delay-estimator/src/main/resources/datamart-partition-for-raw-weather.csv```)*
-            - Ruta absoluta para guardar datos procesados.
-    - Ir al main de OpenWeatherMapFeeder:
-        - **Argumentos en orden (salto de línea para separarlos):** 
-            - Ruta absoluta de database.
-            - Enlace URL de conexión TCP del broker de ActiveMQ.
-            - Ruta relativa del archivo CSV de IATAs e ICAOs. (Debe ser obligatoriamente: ```openweathermap-feeder/src/main/resources/iata-icao.csv```)
-            - Una apikey **PREMIUM** (Plan Estudiante, Professional o superior), proporcionada por OpenWeatherMap.
-            - Cuatro códigos IATA de aeropuertos, con los que operará el feeder. (Tienen que ser los mismos que se le pasen al otro feeder)*
+### 1. Requisitos Previos
+
+- **Instalar ActiveMQ** en tu equipo.
+- Tener instalado **Python** (versión **3.11.9** o superior). Asegúrate de que esté definido como **variable de entorno** del sistema.
+- **Maven** debe poder ejecutarse en IntelliJ:
+  - Si da error, **reinstalar Maven**, agregarlo a las variables del sistema y ejecutar en la terminal de IntelliJ el comando:
     
-    _* Separar con salto de línea_
+    ```bash
+    mvn clean install
+    ```
 
-Si tiene pensado hacer test tanto de AviationStackFeeder como de OpenWeatherMapFeeder, hacer lo siguiente:
-- AviationStackFeeder:
-   - Crear la carpeta ```test/resources```.
-   - Crear ```Apikeys.txt``` con varias claves, separadas por espacios, la primera debe ser válida.
-   - Crear ```ApiKeysFake.txt``` con varias claves, separadas por espacios, la primera no debe ser válida.
-- OpenWeatherMapFeeder:
-   - Crear la carpeta ```test/resources```.
-   - Descargar el ```iata-icao.csv``` y moverlo fuera del proyecto.
-   - Crear ```apikey.txt``` con apikey válida, y separado con un espacio, la ruta absoluta al CSV del ```iata-icao.csv```.
+---
 
+### 2. Clonar el Proyecto
 
-### Tutorial de ejecución con ejemplos
+- Clonar el repositorio en IntelliJ usando la opción "**Get from Version Control**" e ingresando el enlace del repositorio en **Repository URL**.
+
+---
+
+### 3. Preparar los Módulos
+
+#### 📦 AviationStackFeeder
+
+- Ir al archivo `main` del módulo.
+- Proporcionar los siguientes **argumentos** (cada uno en una línea separada), en este orden:
+
+    - Ruta **absoluta** de la base de datos.
+    - URL de conexión TCP del broker de ActiveMQ.  
+      _Ejemplo:_ `tcp://localhost:12345`
+    - Cuatro códigos **IATA** de aeropuertos (uno por línea).<br>
+      _Ejemplos:_ `MAD` `AMS` `JFK` `ZRH`
+    - Cantidad indefinida de **apiKeys de AviationStack** (una por línea).
+
+#### 📦 Event-Store-Builder
+
+- Ir al archivo `main` del módulo.
+- Argumentos esperados (uno por línea), en este orden:
+    - URL de conexión TCP del broker de ActiveMQ.
+    - Tópicos del broker (deben ser **obligatoriamente**):
+    
+      ```
+      Flights
+      Weather
+      ```
+
+#### 📦 Flight-Delay-Estimator
+
+- Ir al archivo `main` del módulo.
+- Argumentos esperados en orden (uno por línea):
+    - Ruta **relativa** del histórico de vuelos, debe ser:  
+     `eventstore/Flights/AviationStackFeeder`
+    - Ruta **relativa** del histórico de climas, debe ser:  
+     `eventstore/Weather/OpenWeatherMapFeeder`
+    - Ruta **absoluta** del CSV donde se guardarán los datos matcheados.
+    - URL de conexión TCP del broker de ActiveMQ.
+    - Tópicos del broker (**deben ser obligatoriamente**):
+  
+      ```
+      Flights
+      Weather
+      ```
+    - Rutas relativas de los CSVs crudos (**deben ser obligatoriamente**):
+      
+      ```
+      flight-delay-estimator/src/main/resources/datamart-partition-for-raw-flights.csv  
+      flight-delay-estimator/src/main/resources/datamart-partition-for-raw-weather.csv
+      ```
+  - Ruta **absoluta** para guardar los datos procesados.
+
+#### 📦 OpenWeatherMapFeeder
+
+- Ir al archivo `main` del módulo.
+- Argumentos esperados en orden (uno por línea):
+
+  - Ruta **absoluta** de la base de datos.
+  - URL de conexión TCP del broker de ActiveMQ.
+  - Ruta **relativa** del archivo CSV de IATAs, debe ser:  
+     `openweathermap-feeder/src/main/resources/iata-icao.csv`
+  - Una **apikey PREMIUM** (Plan Estudiante, Professional o superior) de OpenWeatherMap.
+  - Cuatro códigos **IATA** de aeropuertos (deben coincidir con los usados en el otro feeder).
+    
+---
+
+### 4. Preparación para Tests (Opcional)
+
+#### AviationStackFeeder
+
+- Crear la carpeta:  
+  `test/resources`
+- Crear los archivos:
+  - `Apikeys.txt` → Varias claves (separadas por espacios), la **primera debe ser válida**.
+  - `ApiKeysFake.txt` → Varias claves (separadas por espacios), la **primera debe ser inválida**.
+
+#### OpenWeatherMapFeeder
+
+- Crear la carpeta:  
+  `test/resources`
+- Descargar el archivo `iata-icao.csv` y **moverlo fuera del proyecto**.
+- Crear el archivo:
+  - `apikey.txt` → Contiene dos valores separados por un espacio:  
+    1. Una apikey **válida**.  
+    2. La **ruta absoluta** al archivo `iata-icao.csv`.
+
+## Tutorial de ejecución con ejemplos
 
 Modos de ejecución:
 
@@ -206,35 +264,41 @@ Modos de ejecución:
         ```controller.execute();```
 
 
-### Ejemplos de uso
+### 📌 Ejemplos de uso
 
-- AviationStackFeeder:
-    - **Envio de mensajes al broker** (habiendo ejecutado el main en modo ActiveMQ, pasará lo siguiente a la hora programada):
-  
-        <img src="https://github.com/user-attachments/assets/0d853e87-d90d-4194-beaa-0ce11703bbc4" width="700">
+#### AviationStackFeeder:
+- **Envío de mensajes al broker**
 
-    - **Guardado de información en SQLite** (habiendo ejecutado el main en modo SQLite, ocurrirá lo siguiente):
+    Al ejecutar el ``main`` en modo **ActiveMQ**, el feeder enviará mensajes al broker en la hora programada:
+
+    <img src="https://github.com/user-attachments/assets/0d853e87-d90d-4194-beaa-0ce11703bbc4" width="700">
+
+- **Guardado de información en SQLite**
+
+    Si se ejecuta el ``main`` en modo **SQLite**, los datos se almacenarán en la base de datos local:
       
-      <img src="https://github.com/user-attachments/assets/d35901fc-ba87-4657-a2d0-fe37215a8a88" width="700">
+    <img src="https://github.com/user-attachments/assets/d35901fc-ba87-4657-a2d0-fe37215a8a88" width="700">
 
-    Esta API podría dar algún error al ejecutar debido a errores internos dentro de ella, si eso ocurre lo más recomendado es esperar al día siguiente:
+- **Errores posibles de la API**
+
+    La API de AviationStack puede fallar ocasionalmente por problemas internos. Si esto ocurre, lo más recomendable es **esperar al día siguiente y volver a intentar**:
 
     <img src="https://github.com/user-attachments/assets/c74e2079-84b4-41ef-905a-8df83070c06c" width="700">
 
-- OpenWeatherMapFeeder:
-    - **Envio de mensajes al broker**:
-        
-      <img src="https://github.com/user-attachments/assets/9dae77d9-9d24-4b02-b7da-142be5133b32" width="700">
+#### OpenWeatherMapFeeder:
+- **Envio de mensajes al broker**:
+
+  <img src="https://github.com/user-attachments/assets/9dae77d9-9d24-4b02-b7da-142be5133b32" width="700">
     
-    - **Guardado de información en SQLite**
+- **Guardado de información en SQLite**
 
-      <img src="https://github.com/user-attachments/assets/6e146a50-9df4-4d0a-93b9-579e9d5184d3" width="700">
+  <img src="https://github.com/user-attachments/assets/6e146a50-9df4-4d0a-93b9-579e9d5184d3" width="700">
 
-- EventStoreBuilder:
+#### EventStoreBuilder:
 
   <img src="https://github.com/user-attachments/assets/58c21017-5707-4b22-8d90-dfd4b84eee99" width="700">
 
-### Tutorial de uso de la UI
+## Tutorial de uso de la UI
 
 El usuario puede interactuar con la CLI de la siguiente forma:
 
