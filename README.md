@@ -7,10 +7,11 @@
 - [🧩 Tecnologías utilizadas](#-tecnologías-utilizadas)
 - [🎯 Justificación de APIs y estructura del Datamart](#-justificación-de-la-elección-de-apis-y-estructura-del-datamart)
 - [⚙️ Configuración](#%EF%B8%8F-configuraci%C3%B3n)
-- [Modos de ejecución](#tutorial-de-ejecución-con-ejemplos)
-- [Uso de la UI](#tutorial-de-uso-de-la-ui)
-- [Arquitectura](#arquitecturas-del-sistema-y-aplicación)
-- [Principios y patrones de diseño](#principios-y-patrones-de-diseño-aplicados-en-cada-módulo)
+- [🚀 Modos de ejecución](#-tutorial-de-ejecución-con-ejemplos)
+- [🧭 Uso de la UI](#-tutorial-de-uso-de-la-ui)
+- [🌀 Arquitectura](#-arquitecturas-del-sistema-y-aplicación)
+- [🧱 Principios y patrones de diseño](#-principios-y-patrones-de-diseño-aplicados-en-cada-módulo)
+- [👥 Autores](#-autores)
 
 
 ## 📝 Descripción del proyecto y propuesta de valor
@@ -217,52 +218,133 @@ El uso de archivos intermedios `.csv` como **checkpoints persistentes** mejora:
     1. Una apikey **válida**.  
     2. La **ruta absoluta** al archivo `iata-icao.csv`.
 
-## Tutorial de ejecución con ejemplos
+## 🚀 Tutorial de ejecución con ejemplos
 
-Modos de ejecución:
+### 🛠️ Modos de ejecución
 
-- **Uso del entorno de mensajería e invocación de la UI:**
+#### 1. **Uso del entorno de mensajería e invocación de la UI**
 
-    Es el modo principal de ejecución. Se realiza una conexión a un broker de mensajería (en nuestro caso ActiveMQ); para que ambos feeders puedan enviar información en formato de eventos, que consisten en mensajes inmutables que perduran a lo largo del tiempo. De esta forma, AviationStackFeeder recoge la información de vuelos activos; y al día siguiente, OpenWeatherMapFeeder suministrará los valores climáticos de los aeropuertos elegidos por el usuario en la configuración de la aplicación. La frecuencia de actualización es de 1 día para ambas APIs (por defecto, a las 10:00 se actualiza el AviationStackFeeder y a las 11:00 el OpenWeatherMapFeeder).
+Este es el **modo principal de ejecución**.  
+Se realiza una conexión a un broker de mensajería (**ActiveMQ**, en este caso), para que ambos **feeders** puedan enviar información en formato de **eventos**, que consisten en **mensajes inmutables** que perduran en el tiempo.
 
-    Todos estos eventos son almacenados en un EventStore para llevar un historial de mensajes recibidos.
+- `AviationStackFeeder` recoge la información de vuelos activos.
+- Al día siguiente, `OpenWeatherMapFeeder` suministra los **valores climáticos** de los aeropuertos elegidos por el usuario en la configuración.
 
-    A su vez, el Datamart concentra toda esa información que pueda ser relevante para la propuesta de valor. Tiene la capacidad de, cargar el histórico de mensajes almacenados en el EventStore; y de recibir eventos en tiempo real, para hacer un posterior procesamiento de los eventos recibidos.
+> La frecuencia de actualización es de **1 día** para ambas APIs:  
+> - 🕙 **10:00** → `AviationStackFeeder`  
+> - 🕚 **11:00** → `OpenWeatherMapFeeder`
 
-    En último lugar, el usuario podrá interactuar con la UI. (Ejemplos mostrados más abajo ↓)
+Todos estos eventos son almacenados en un **EventStore**, que lleva un historial de mensajes recibidos.  
+El **Datamart** concentra toda la información relevante, con capacidad para:
+- Cargar el histórico de eventos del `EventStore`
+- Recibir eventos **en tiempo real**
+- Procesar los eventos posteriormente
 
-    - Encender el broker de mensajería.
-    - Ejecutar el main de Event-Store-Builder (para el almacenamiento de eventos).
-    - Ejecutar el main de Flight-Delay-Estimator (para la carga de históricos y recepción de eventos en tiempo real, junto a la ejecución de la UI).
-    - Ejecutar el main de AviationStackFeeder (para el envio automático de información):
-        
-        ```FlightController controller = new FlightController(new AviationStackProvider(new AviationStackProcessor(Arrays.copyOfRange(args,6,args.length)),new FlightJSONParser(), Arrays.copyOfRange(args,2,6)), new FlightEventStore(args[1],new FlightEventSerializer(),new FlightEventMapper()), new TaskScheduler());```
+Finalmente, el usuario podrá interactuar con la **UI**.  
+(Ejemplos mostrados más abajo ↓)
 
-        ```controller.execute();```
+##### ▶️ Pasos de ejecución
 
-    - Ejecutar el main de OpenWeatherMapFeeder:
+1. Encender el **broker de mensajería**
+2. Ejecutar el `main` de **Event-Store-Builder** (almacenamiento de eventos)
+3. Ejecutar el `main` de **Flight-Delay-Estimator** (para carga de históricos, recepción de eventos y ejecución de la UI)
+4. Ejecutar el `main` de **AviationStackFeeder**:
 
-        ```WeatherController controller = new WeatherController(new OpenWeatherMapProvider(new OpenWeatherMapProcessor(args[3]),new WeatherJSONParser(), Arrays.copyOfRange(args,4,args.length)), new WeatherEventStore(args[1],new WeatherEventMapper(),new WeatherEventSerializer()), new TaskScheduler(), new AirportToCoordinates(args[2]), new UnixUtils());```
+```java
+FlightController controller = new FlightController(
+    new AviationStackProvider(
+        new AviationStackProcessor(Arrays.copyOfRange(args, 6, args.length)),
+        new FlightJSONParser(),
+        Arrays.copyOfRange(args, 2, 6)
+    ),
+    new FlightEventStore(
+        args[1],
+        new FlightEventSerializer(),
+        new FlightEventMapper()
+    ),
+    new TaskScheduler()
+);
 
-        ```controller.execute();```
+controller.execute();
+```
 
-- **Guardado en SQLite:**
+5. Ejecutar el `main` de **OpenWeatherMapFeeder**:
 
-    Almacena en una base de datos de SQLite la información proveniente de las APIs (sin utilizar el Datamart, ni del EventStore, ni de la UI; simplemente escribe en la database).
+```java
+WeatherController controller = new WeatherController(
+    new OpenWeatherMapProvider(
+        new OpenWeatherMapProcessor(args[3]),
+        new WeatherJSONParser(),
+        Arrays.copyOfRange(args, 4, args.length)
+    ),
+    new WeatherEventStore(
+        args[1],
+        new WeatherEventMapper(),
+        new WeatherEventSerializer()
+    ),
+    new TaskScheduler(),
+    new AirportToCoordinates(args[2]),
+    new UnixUtils()
+);
 
+controller.execute();
+```
 
-    - Ejecutar el main de AviationStackFeeder:
+---
 
-        ```FlightController controller = new FlightController(new AviationStackProvider(new AviationStackProcessor(Arrays.copyOfRange(args,6,args.length)),new FlightJSONParser(), Arrays.copyOfRange(args,2,6)), new FlightSQLStore(args[0],new SQLConnection(),new SQLModifierFlights(), new FlightModelMapper()), new TaskScheduler());```
+#### 2. **Guardado en SQLite**
 
-        ```controller.execute();```
+Este modo **almacena en una base de datos SQLite** la información proveniente de las APIs.
+No se utiliza el **Datamart**, ni el **EventStore**, ni la **UI**.
+Simplemente se escribe directamente en la base de datos.
 
-    - Ejecutar el main de OpenWeatherMapFeeder:
+##### ▶️ Pasos de ejecución
 
-        ```WeatherController controller = new WeatherController(new OpenWeatherMapProvider(new OpenWeatherMapProcessor(args[3]),new WeatherJSONParser(), Arrays.copyOfRange(args,4,args.length)), new WeatherSQLStore(args[0],new SQLModifierWeather(), new SQLConnection(), new WeatherResultMapper()), new TaskScheduler(), new AirportToCoordinates(args[2]), new UnixUtils());```
+1. Ejecutar el `main` de **AviationStackFeeder**:
 
-        ```controller.execute();```
+```java
+FlightController controller = new FlightController(
+    new AviationStackProvider(
+        new AviationStackProcessor(Arrays.copyOfRange(args, 6, args.length)),
+        new FlightJSONParser(),
+        Arrays.copyOfRange(args, 2, 6)
+    ),
+    new FlightSQLStore(
+        args[0],
+        new SQLConnection(),
+        new SQLModifierFlights(),
+        new FlightModelMapper()
+    ),
+    new TaskScheduler()
+);
 
+controller.execute();
+```
+
+2. Ejecutar el `main` de **OpenWeatherMapFeeder**:
+
+```java
+WeatherController controller = new WeatherController(
+    new OpenWeatherMapProvider(
+        new OpenWeatherMapProcessor(args[3]),
+        new WeatherJSONParser(),
+        Arrays.copyOfRange(args, 4, args.length)
+    ),
+    new WeatherSQLStore(
+        args[0],
+        new SQLModifierWeather(),
+        new SQLConnection(),
+        new WeatherResultMapper()
+    ),
+    new TaskScheduler(),
+    new AirportToCoordinates(args[2]),
+    new UnixUtils()
+);
+
+controller.execute();
+```
+
+---
 
 ### 📌 Ejemplos de uso
 
@@ -298,23 +380,32 @@ Modos de ejecución:
 
   <img src="https://github.com/user-attachments/assets/58c21017-5707-4b22-8d90-dfd4b84eee99" width="700">
 
-## Tutorial de uso de la UI
+## 🧭 Tutorial de uso de la UI
 
-El usuario puede interactuar con la CLI de la siguiente forma:
+1. **Introduce el IATA del aeropuerto**.  
+2. **Indica si el aeropuerto es de salida o de llegada**.  
+3. **Elige el modelo predictivo** del que quieras ver el rendimiento:  
 
-- Introduce el IATA del aeropuerto 
-- Introduce si ese aeropuerto se toma como de salida o de llegada
-- Elige el modelo predictivo del que quieras ver el rendimiento (disponibles: ```LinearRegression``` ```KNNRegressor``` son los modelos que mejor se adaptan teóricamente)
-- Elige entre realizar otra consulta (```s```) o cerrar la interfaz (```n```), después de esta consulta; en caso de querer realizar otra consulta, actualiza el Datamart con los eventos a tiempo real. <br>
+   Modelos disponibles:
+   - `LinearRegression`
+   - `KNNRegressor`
+> *(Estos modelos son los que mejor se adaptan teóricamente).*
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://github.com/user-attachments/assets/2a0b9e9c-67f8-4e9d-848b-3588bed3f22a" width="650">
+4. **Decide si quieres realizar otra consulta (`s`) o cerrar la interfaz (`n`)**.  
 
-El Datamart comprobará con procesos programados periódicamente cada cinco minutos para verificar la incorporación de datos en tiempo real. Adicionalmente, cada treinta minutos se activará un procedimiento de conciliación y emparejamiento de datos entre las distintas fuentes de información, con el objetivo de garantizar su integridad y coherencia.
+<img src="https://github.com/user-attachments/assets/2a0b9e9c-67f8-4e9d-848b-3588bed3f22a" width="650">
 
-El usuario será notificado de la ejecución de estos procesos mediante mensajes de estado generados por el sistema, los cuales reflejan el progreso y los resultados de las tareas programadas.
 
-### Arquitecturas del sistema y aplicación
+---
 
+### 🔄 Actualización del Datamart
+
+- El **Datamart comprueba cada dos minutos** la incorporación de datos en tiempo real mediante procesos programados.
+- **Cada dos minutos**, se activa un procedimiento de **conciliación y emparejamiento de datos** entre las diferentes fuentes, con el objetivo de garantizar su **integridad y coherencia**.
+
+📢 El usuario será notificado de la ejecución de estos procesos mediante **mensajes de estado generados por el sistema**, los cuales reflejan el **progreso y resultados** de las tareas programadas.
+
+## 🌀 Arquitecturas del sistema y aplicación
 
 ![Sistema](https://github.com/user-attachments/assets/456f992f-c6a0-4869-b70a-77a686a54f0e)
 
@@ -327,34 +418,54 @@ El usuario será notificado de la ejecución de estos procesos mediante mensajes
 
 [Diagrama de clases de FlightDelayEstimator](https://github.com/user-attachments/assets/4aafacd8-d96b-4c0f-8f43-dc89a0b3a1b3)
 
-### Principios y patrones de diseño aplicados en cada módulo
+## 🧱 Principios y patrones de diseño aplicados en cada módulo
 
-En los feeders, la arquitectura implementada sigue un diseño modular de tipo hexagonal, lo que permite una clara separación entre el núcleo de la aplicación y sus interfaces externas, como bases de datos, APIs o interfaces de usuario. Esto facilita el desacoplamiento y mejora la flexibilidad del sistema. Cada módulo está diseñado conforme al Single Responsibility Principle, SRP, asegurando que cada componente tenga un propósito bien definido. Esto mejora la mantenibilidad, facilita las pruebas y permite realizar cambios sin afectar otras partes del sistema. Además, se aplica el Open/Closed Principle (OCP), permitiendo que los módulos puedan ser extendidos con nuevas funcionalidades sin necesidad de modificar el código existente, favoreciendo así la escalabilidad y el mantenimiento del sistema. 
+En los **feeders**, la arquitectura implementada sigue un diseño modular de tipo **hexagonal**, lo que permite una clara separación entre el **núcleo de la aplicación** y sus **interfaces externas** (como bases de datos, APIs o interfaces de usuario). Esto facilita el **desacoplamiento** y mejora la **flexibilidad del sistema**.
 
-Ejemplos de OCP:
+Cada módulo está diseñado conforme al **Single Responsibility Principle (SRP)**, asegurando que cada componente tenga un propósito bien definido.  
+Esto:
+- Mejora la **mantenibilidad**  
+- Facilita las **pruebas**  
+- Permite realizar **cambios sin afectar otras partes** del sistema
 
-```
+Además, se aplica el **Open/Closed Principle (OCP)**, permitiendo que los módulos puedan ser **extendidos con nuevas funcionalidades** sin necesidad de modificar el código existente, favoreciendo así la **escalabilidad** y el **mantenimiento** del sistema.
+
+#### ✳️ Ejemplos de OCP
+
+```java
 public interface FlightStore {
-    public void saveFlights (FlightResponse flightResponse);
+    public void saveFlights(FlightResponse flightResponse);
 }
 ```
-```
+```java
 public interface FlightProvider {
     FlightResponse flightProvider(String airportType, String airportIata);
     String[] getPreferredAirports();
 }
 ```
 
-Estas interfaces permiten que se puedan añadir nuevas tecnologías al código si surgiese la necesidad; y no haría falta modificar el resto del código. Por ejemplo, una implementación de FlightStore para guardar datos en Oracle o MySQL. Esta dinámica es idéntica en el otro feeder. Asimismo, se podría introducir otra tecnología de recolección de datos que no sea mediante APIs.
+Estas interfaces permiten que se puedan añadir nuevas tecnologías al código si surgiese la necesidad, **sin necesidad de modificar el resto del sistema**.
+Por ejemplo: una implementación de `FlightStore` para guardar datos en **Oracle** o **MySQL**.
+Esta dinámica es idéntica en el otro feeder. Asimismo, se podría introducir otra tecnología de recolección de datos que no sea mediante APIs.
 
-En el EventStoreBuilder, se sigue también una arquitectura hexagonal; aunque no se aprecia al consistir de un número de clases muy pequeño.
+---
 
-En último lugar, el módulo de la unidad de negocio (FlightDelayEstimator) sigue una estructura similar a la hexagonal. Se refleja el OCP en la siguiente interfaz:
+En el **EventStoreBuilder**, se sigue también una **arquitectura hexagonal**; aunque no se aprecia al consistir de un número de clases muy pequeño.
 
-```
+---
+
+En último lugar, el módulo de la unidad de negocio (**FlightDelayEstimator**) sigue una estructura similar a la hexagonal.
+Se refleja el **OCP** en la siguiente interfaz:
+
+```java
 public interface ProcessInvoker {
     public void executeExternalProcess() throws IOException, InterruptedException;
 }
 ```
+El **Open/Closed Principle** permitiría introducir un **proceso de análisis de datos diferente** si se desease en el futuro, sin cambiar demasiado código.
+Por ejemplo: un proceso en **R** u otro lenguaje.
 
-El OpenClosedPrinciple permitiría introducir un proceso de análisis de datos diferente si se desease en el futuro, sin cambiar demasiado código (por ejemplo, un proceso en R u otro lenguaje).
+## 👥 Autores
+
+- **Ayoze Ruano** — 🔗 [GitHub](https://github.com/ayozeruanoalc)
+- **Enrique Reina** — 🔗 [GitHub](https://github.com/ellupe)
